@@ -12,6 +12,11 @@ interface VerifiedAddress {
   longitude: number;
 }
 
+interface GeocodedCoords {
+  latitude: number;
+  longitude: number;
+}
+
 export function BookingForm({ onSuccess }: BookingFormProps) {
   const [customer, setCustomer] = useState('');
   const [service, setService] = useState('');
@@ -22,6 +27,7 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [verifiedAddress, setVerifiedAddress] = useState<VerifiedAddress | null>(null);
+  const [geocodedCoords, setGeocodedCoords] = useState<GeocodedCoords | null>(null);
   const [verifyError, setVerifyError] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [mapHeight, setMapHeight] = useState(350);
@@ -63,17 +69,23 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
     if (!verified) {
       setVerifyError('주소를 찾을 수 없습니다');
       setVerifiedAddress(null);
+      setGeocodedCoords(null);
       setVerifying(false);
       return;
     }
 
     setVerifiedAddress(verified);
+    setGeocodedCoords({
+      latitude: verified.latitude,
+      longitude: verified.longitude,
+    });
     setVerifying(false);
   }
 
   function handleBaseAddressChange(e: React.ChangeEvent<HTMLInputElement>) {
     setBaseAddress(e.target.value);
     setVerifiedAddress(null);
+    setGeocodedCoords(null);
     setVerifyError('');
   }
 
@@ -121,7 +133,7 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
 
     setLoading(true);
     try {
-      const { error: insertError } = await supabase.from('bookings').insert({
+      const insertData: any = {
         customer,
         service,
         date,
@@ -129,7 +141,14 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
         address: fullAddress,
         status: 'pending',
         via: 'form',
-      });
+      };
+
+      if (geocodedCoords) {
+        insertData.latitude = geocodedCoords.latitude;
+        insertData.longitude = geocodedCoords.longitude;
+      }
+
+      const { error: insertError } = await supabase.from('bookings').insert(insertData);
 
       if (insertError) throw insertError;
 
@@ -140,6 +159,7 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
       setBaseAddress('');
       setDetailAddress('');
       setVerifiedAddress(null);
+      setGeocodedCoords(null);
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : '예약 추가 실패');

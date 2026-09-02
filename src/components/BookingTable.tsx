@@ -9,6 +9,8 @@ interface Booking {
   time: string;
   address: string;
   status: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface MapBooking extends Booking {
@@ -37,7 +39,7 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId }:
     try {
       const { data, error: fetchError } = await supabase
         .from('bookings')
-        .select('id, customer, service, date, time, address, status')
+        .select('id, customer, service, date, time, address, status, latitude, longitude')
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
@@ -78,25 +80,38 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId }:
     }
 
     setError('');
-    setGeocodingId(booking.id);
 
-    const coords = await geocodeAddress(booking.address);
+    let mapBooking: MapBooking;
 
-    if (!coords) {
-      setError('주소를 찾을 수 없습니다');
-      onBookingSelect?.(null);
+    if (booking.latitude !== null && booking.latitude !== undefined &&
+        booking.longitude !== null && booking.longitude !== undefined) {
+      mapBooking = {
+        ...booking,
+        latitude: booking.latitude,
+        longitude: booking.longitude,
+      };
+      onBookingSelect?.(mapBooking);
+    } else {
+      setGeocodingId(booking.id);
+
+      const coords = await geocodeAddress(booking.address);
+
+      if (!coords) {
+        setError('주소를 찾을 수 없습니다');
+        onBookingSelect?.(null);
+        setGeocodingId(null);
+        return;
+      }
+
+      mapBooking = {
+        ...booking,
+        latitude: coords.lat,
+        longitude: coords.lon,
+      };
+
+      onBookingSelect?.(mapBooking);
       setGeocodingId(null);
-      return;
     }
-
-    const mapBooking: MapBooking = {
-      ...booking,
-      latitude: coords.lat,
-      longitude: coords.lon,
-    };
-
-    onBookingSelect?.(mapBooking);
-    setGeocodingId(null);
   }
 
   async function toggleStatus(id: number, currentStatus: string) {
