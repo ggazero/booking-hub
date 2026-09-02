@@ -1,0 +1,6 @@
+# Supabase configuration
+[api]
+enabled = true
+
+[functions.notify-booking-slack]
+enabled = true

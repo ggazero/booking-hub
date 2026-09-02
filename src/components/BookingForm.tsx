@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase } from '../lib/supabaseClient';
+import { notifySlackBooking } from '../lib/slack';
 
 interface BookingFormProps {
   onSuccess: () => void;
@@ -151,6 +152,18 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
       const { error: insertError } = await supabase.from('bookings').insert(insertData);
 
       if (insertError) throw insertError;
+
+      const finalAddress = detailAddress.trim()
+        ? `${baseAddress} ${detailAddress}`
+        : baseAddress;
+
+      notifySlackBooking({
+        customer,
+        service,
+        date,
+        time,
+        address: finalAddress,
+      });
 
       setCustomer('');
       setService('');

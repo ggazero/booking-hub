@@ -10,6 +10,8 @@ create table bookings (
   address text,
   status text not null default 'pending',
   via text not null default 'form',
+  latitude double precision,
+  longitude double precision,
   created_at timestamptz not null default now()
 );
 
