@@ -8,9 +8,24 @@ interface BookingPayload {
   address?: string;
 }
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json",
+};
+
 serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: corsHeaders,
+    });
   }
 
   try {
@@ -21,7 +36,7 @@ serve(async (req) => {
       console.error("SLACK_WEBHOOK_URL not configured");
       return new Response(
         JSON.stringify({ error: "Webhook URL not configured" }),
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -80,18 +95,19 @@ serve(async (req) => {
         JSON.stringify({
           error: `Slack notification failed: ${slackResponse.statusText}`,
         }),
-        { status: slackResponse.status }
+        { status: slackResponse.status, headers: corsHeaders }
       );
     }
 
     return new Response(JSON.stringify({ success: true }), {
-      headers: { "Content-Type": "application/json" },
+      status: 200,
+      headers: corsHeaders,
     });
   } catch (error) {
     console.error("Edge Function error:", error);
     return new Response(JSON.stringify({ error: String(error) }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: corsHeaders,
     });
   }
 });
