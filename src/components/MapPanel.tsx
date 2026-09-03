@@ -45,7 +45,10 @@ export function MapPanel({ selectedBooking }: { selectedBooking: MapBooking | nu
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           {selectedBooking && (
-            <Marker position={[selectedBooking.latitude, selectedBooking.longitude]}>
+            <Marker
+  position={[selectedBooking.latitude, selectedBooking.longitude]}
+  icon={defaultIcon}
+>
               <Popup>
                 <div className="text-sm">
                   <p className="font-bold">{selectedBooking.customer}</p>

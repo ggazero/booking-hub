@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import { supabase } from '../lib/supabaseClient';
 import { notifySlackBooking } from '../lib/slack';
+import { createCalendarEvent } from '../lib/googleCalendar';
 
 interface BookingFormProps {
   onSuccess: () => void;
@@ -164,6 +165,19 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
         time,
         address: finalAddress,
       });
+
+      try {
+        await createCalendarEvent({
+          customer,
+          service,
+          date,
+          time,
+          address: finalAddress,
+        });
+      } catch (calendarError) {
+        console.warn('Google Calendar 동기화 실패:', calendarError);
+        setError('예약은 저장되었으나 Google Calendar 동기화에 실패했습니다.');
+      }
 
       setCustomer('');
       setService('');
