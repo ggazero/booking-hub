@@ -38,8 +38,17 @@ async function getAccessToken(): Promise<string> {
 
   if (!tokenResponse.ok) {
     const errorData = await tokenResponse.json();
+    const errorCode = errorData.error || "unknown";
+    const errorDescription = errorData.error_description || "No description provided";
+
+    console.error(`Google OAuth Token Refresh Failed:
+Status: ${tokenResponse.status} ${tokenResponse.statusText}
+Error Code: ${errorCode}
+Error Description: ${errorDescription}
+Hint: Check if GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, or GMAIL_REFRESH_TOKEN is incorrect`);
+
     throw new Error(
-      `Failed to refresh access token: ${errorData.error_description}`
+      `Failed to refresh access token: [${errorCode}] ${errorDescription}`
     );
   }
 
