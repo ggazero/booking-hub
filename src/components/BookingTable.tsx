@@ -26,9 +26,10 @@ interface BookingTableProps {
   refreshKey: number;
   onBookingSelect?: (booking: MapBooking | null) => void;
   selectedBookingId?: number | null;
+  mode?: 'list' | 'review';
 }
 
-export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId }: BookingTableProps) {
+export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, mode = 'list' }: BookingTableProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [geocodingId, setGeocodingId] = useState<number | null>(null);
@@ -133,12 +134,122 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId }:
     }
   }
 
+  async function updateDecision(id: number, newDecision: string, slotAssigned?: string) {
+    try {
+      const updateData: any = { decision: newDecision };
+      if (slotAssigned) {
+        updateData.slot_assigned = slotAssigned;
+      }
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+      fetchBookings();
+    } catch (error) {
+      console.error('상태 변경 실패:', error);
+    }
+  }
+
+  const displayBookings = mode === 'review'
+    ? bookings.filter((b: any) => ['pending', 'review', 'rejected', 'asking'].includes(b.decision))
+    : bookings;
+
   if (loading) {
     return <div className="text-center py-8">로딩 중...</div>;
   }
 
-  if (bookings.length === 0) {
-    return <div className="text-center py-8 text-gray-500">예약이 없습니다</div>;
+  if (displayBookings.length === 0) {
+    return <div className="text-center py-8 text-gray-500">
+      {mode === 'review' ? '미확정 예약이 없습니다' : '예약이 없습니다'}
+    </div>;
+  }
+
+  if (mode === 'review') {
+    const getDecisionBadge = (decision: string) => {
+      const badgeMap: Record<string, string> = {
+        pending: 'bg-gray-100 text-gray-800',
+        confirmed_auto: 'bg-green-100 text-green-800',
+        confirmed_human: 'border-2 border-green-600 text-green-800 bg-white',
+        review: 'bg-yellow-100 text-yellow-800',
+        rejected: 'bg-red-100 text-red-800',
+        asking: 'bg-blue-100 text-blue-800',
+      };
+      return badgeMap[decision] || 'bg-gray-100 text-gray-800';
+    };
+
+    const getDecisionLabel = (decision: string) => {
+      const labelMap: Record<string, string> = {
+        pending: '대기',
+        confirmed_auto: '확정(자동)',
+        confirmed_human: '확정(수동)',
+        review: '검토',
+        rejected: '거절',
+        asking: '입력대기',
+      };
+      return labelMap[decision] || decision;
+    };
+
+    return (
+      <div>
+        {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{error}</div>}
+        <div className="space-y-2">
+          {displayBookings.map((booking: any) => (
+            <div key={booking.id} className="bg-white border border-gray-300 rounded p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1">
+                  <p className="font-bold">{booking.customer}</p>
+                  <p className="text-sm text-gray-600">{booking.kind} / {booking.form} ({booking.date})</p>
+                  <p className="text-sm text-gray-600">희망: {booking.slots_wanted}</p>
+                </div>
+                <span className={`px-3 py-1 rounded text-sm font-medium ${getDecisionBadge(booking.decision)}`}>
+                  {getDecisionLabel(booking.decision)}
+                </span>
+              </div>
+
+              <p className="text-sm mb-3">{booking.reason}</p>
+
+              {booking.decision === 'pending' && booking.candidate && (
+                <button
+                  onClick={() => updateDecision(booking.id, 'confirmed_human', booking.candidate)}
+                  className="px-3 py-1 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700"
+                >
+                  후보 {booking.candidate} 확정
+                </button>
+              )}
+
+              {booking.decision === 'review' && booking.options && (
+                <div className="space-y-2">
+                  {booking.options.split(',').map((customer: string) => (
+                    <button
+                      key={customer}
+                      onClick={() => updateDecision(booking.id, 'confirmed_human')}
+                      className="w-full px-3 py-1 bg-yellow-600 text-white rounded text-sm font-medium hover:bg-yellow-700 text-left"
+                    >
+                      {customer.trim()} 이 쪽으로 확정
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {booking.trace && (
+                <details className="mt-3 text-xs">
+                  <summary className="cursor-pointer text-blue-600 hover:underline">과정 보기</summary>
+                  <div className="mt-2 p-2 bg-gray-50 rounded">
+                    <ol className="list-decimal list-inside space-y-1 text-gray-700">
+                      {booking.trace.split('\n').map((line: string, idx: number) => (
+                        line.trim() && <li key={idx}>{line.trim()}</li>
+                      ))}
+                    </ol>
+                  </div>
+                </details>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -159,7 +270,7 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId }:
             </tr>
           </thead>
           <tbody>
-            {bookings.map((booking) => (
+            {displayBookings.map((booking: any) => (
               <tr
                 key={booking.id}
                 onClick={() => handleRowClick(booking)}

@@ -8,7 +8,7 @@ import { BookingForm } from './components/BookingForm';
 import { BookingTable } from './components/BookingTable';
 import { MapPanel } from './components/MapPanel';
 
-type Tab = '대시보드' | '예약목록' | '예약추가' | '상태관리' | '위치확인';
+type Tab = '대시보드' | '예약목록' | '예약추가' | '미확정 관리' | '위치확인';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -18,7 +18,7 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedMapBooking, setSelectedMapBooking] = useState<any>(null);
 
-  const tabs: Tab[] = ['대시보드', '예약목록', '예약추가', '상태관리', '위치확인'];
+  const tabs: Tab[] = ['대시보드', '예약목록', '예약추가', '미확정 관리', '위치확인'];
 
   async function checkAdminStatus(userEmail: string) {
     try {
@@ -122,7 +122,7 @@ export default function App() {
             />
           )}
 
-          {activeTab === '상태관리' && <BookingTable refreshKey={refreshKey} />}
+          {activeTab === '미확정 관리' && <BookingTable refreshKey={refreshKey} mode="review" />}
 
           {activeTab === '위치확인' && (
             <div className="space-y-6">
