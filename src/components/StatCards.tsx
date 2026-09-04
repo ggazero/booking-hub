@@ -18,6 +18,13 @@ interface Booking {
   trace?: string | null;
 }
 
+interface DecisionLog {
+  time: string;
+  customer: string;
+  decision: string;
+  trace: string[];
+}
+
 const DECISION_COLORS: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-800',
   confirmed_auto: 'bg-green-100 text-green-800',
@@ -52,6 +59,7 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
     const saved = localStorage.getItem('auto-judge');
     return saved ? JSON.parse(saved) : true;
   });
+  const [decisionLogs, setDecisionLogs] = useState<DecisionLog[]>([]);
   const [lastDecisionPath, setLastDecisionPath] = useState<string>();
   const [animatingPath, setAnimatingPath] = useState(false);
 
@@ -209,6 +217,14 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
           };
         }
 
+        const log: DecisionLog = {
+          time: new Date().toLocaleTimeString('ko-KR'),
+          customer: booking.customer,
+          decision: result.decision,
+          trace: result.trace,
+        };
+        setDecisionLogs((prev) => [log, ...prev.slice(0, 11)]);
+
         setLastDecisionPath(`pending-${result.decision}`);
         setAnimatingPath(true);
       }
@@ -287,6 +303,34 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
         lastDecisionPath={lastDecisionPath}
         animatingPath={animatingPath}
       />
+
+      {decisionLogs.length > 0 && (
+        <div className="bg-white p-4 rounded border border-gray-200 shadow-sm" style={{ boxShadow: '0 2px 8px rgba(0, 11, 80, 0.08)' }}>
+          <h3 className="text-sm font-bold text-gray-900 mb-3">판정 로그 (최근 12건)</h3>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {decisionLogs.map((log, idx) => (
+              <div key={idx} className="text-xs p-3 bg-gray-50 rounded border border-gray-200">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="font-medium text-gray-600">{log.time}</span>
+                  <span className="text-gray-900 font-semibold flex-shrink-0">{log.customer}</span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ${DECISION_COLORS[log.decision]}`}>
+                    {DECISION_LABELS[log.decision]}
+                  </span>
+                </div>
+                {log.trace && log.trace.length > 0 && (
+                  <div className="text-gray-600 bg-white p-2 rounded border border-gray-100 mt-2">
+                    <ol className="list-decimal list-inside space-y-1">
+                      {log.trace.map((line, i) => (
+                        <li key={i} className="text-xs text-gray-600">{line}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
