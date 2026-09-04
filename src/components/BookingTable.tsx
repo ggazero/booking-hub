@@ -151,6 +151,16 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
         reason: result.reason,
       };
       if (result.options) updateData.options = result.options;
+
+      // candidate 저장: 배열이면 '+'로 연결
+      if (result.candidate) {
+        if (Array.isArray(result.candidate)) {
+          updateData.candidate = result.candidate.join('+');
+        } else {
+          updateData.candidate = result.candidate;
+        }
+      }
+
       if (result.slotAssigned) updateData.slot_assigned = result.slotAssigned;
       if (result.trace && result.trace.length > 0) {
         updateData.trace = result.trace.join('\n');
@@ -161,7 +171,10 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
         .update(updateData)
         .eq('id', bookingId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('판정 저장 오류:', updateError);
+        throw updateError;
+      }
       fetchBookings();
     } catch (error) {
       console.error('판정 실패:', error);

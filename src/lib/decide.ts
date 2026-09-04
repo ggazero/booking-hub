@@ -93,7 +93,7 @@ export function decide(
 
     for (const wanted of otherWanted) {
       const required = requiredSlots(other.kind, [wanted]);
-      const allFree = required.every((slot) => !occupiedSlots.has(slot) && !candidates.includes(slot));
+      const allFree = required.every((slot) => !occupiedSlots.has(slot));
       if (allFree) {
         otherCandidates.push(...required);
         break;

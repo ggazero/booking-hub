@@ -11,8 +11,10 @@ interface Booking {
   memo: string;
   date: string;
   decision: string;
+  slots_wanted: string;
   slot_assigned?: string | null;
   reason?: string | null;
+  candidate?: string | null;
   trace?: string | null;
 }
 
@@ -83,7 +85,7 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*')
+        .select('id, customer, kind, form, memo, date, decision, slots_wanted, slot_assigned, reason, candidate, trace, status')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -109,22 +111,111 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
 
   async function handleJudgeAll() {
     try {
-      const pendingBookings = bookings.filter((b) => b.decision === 'pending');
+      const pendingBookings = bookings
+        .filter((b) => b.decision === 'pending')
+        .sort((a, b) => Number(a.id) - Number(b.id));
+      let workingBookings = JSON.parse(JSON.stringify(bookings));
 
+      // 1단계: 동점 예약 사전 감지 (같은 날, 같은 종류, 희망 슬롯 1개만, 둘 다 pending)
+      const reviewPairs = new Set<number>();
+      for (let i = 0; i < pendingBookings.length; i++) {
+        for (let j = i + 1; j < pendingBookings.length; j++) {
+          const a = pendingBookings[i];
+          const b = pendingBookings[j];
+
+          // 둘 다 pending이어야 함
+          if (a.decision !== 'pending' || b.decision !== 'pending') continue;
+
+          // 같은 날짜, 같은 종류
+          if (a.date !== b.date || a.kind !== b.kind) continue;
+
+          // 희망 슬롯 정확히 1개씩, 동일
+          const aWanted = a.slots_wanted.split(',').map((s: string) => s.trim());
+          const bWanted = b.slots_wanted.split(',').map((s: string) => s.trim());
+
+          if (aWanted.length === 1 && bWanted.length === 1 && aWanted[0] === bWanted[0]) {
+            reviewPairs.add(a.id);
+            reviewPairs.add(b.id);
+          }
+        }
+      }
+
+      // 2단계: 각 예약 판정 (workingBookings 순차 갱신)
       for (const booking of pendingBookings) {
-        const result = decide(booking, bookings, autoJudge);
+        const isReviewPair = reviewPairs.has(booking.id);
+        let result;
+
+        if (isReviewPair) {
+          const pairBooking = pendingBookings.find(
+            (b: any) =>
+              b.date === booking.date &&
+              b.kind === booking.kind &&
+              b.slots_wanted === booking.slots_wanted &&
+              b.id !== booking.id
+          );
+
+          result = {
+            decision: 'review' as const,
+            reason: `동점 - ${pairBooking?.customer}도 같은 칸이 유일 후보`,
+            options: [booking.customer, pairBooking?.customer].filter(Boolean).join(','),
+            trace: ['1 빈 칸 검사: 없음', '5 같은 날 대기 요청 비교: 같은 칸이 유일 후보 (사전 감지)', '결과: 검토 필요 - 동점'],
+          };
+        } else {
+          const decisionContext = workingBookings.filter(
+            (b: any) => b.id === booking.id || b.decision !== 'pending'
+          );
+          result = decide(booking, decisionContext, autoJudge);
+        }
 
         const updateData: any = {
           decision: result.decision,
           reason: result.reason,
         };
         if (result.options) updateData.options = result.options;
-        if (result.slotAssigned) updateData.slot_assigned = result.slotAssigned;
+
+        // candidate 저장: 배열이면 '+'로 연결
+        if (result.candidate) {
+          if (Array.isArray(result.candidate)) {
+            updateData.candidate = result.candidate.join('+');
+          } else {
+            updateData.candidate = result.candidate;
+          }
+        }
+
+        // slot_assigned 저장
+        if (result.slotAssigned) {
+          updateData.slot_assigned = result.slotAssigned;
+        } else if (result.candidate && !Array.isArray(result.candidate)) {
+          updateData.slot_assigned = result.candidate;
+        } else if (result.candidate && Array.isArray(result.candidate)) {
+          updateData.slot_assigned = result.candidate.join('+');
+        }
+
+        // confirmed_auto인 경우 status 업데이트
+        if (result.decision === 'confirmed_auto') {
+          updateData.status = 'confirmed';
+        }
+
         if (result.trace && result.trace.length > 0) {
           updateData.trace = result.trace.join('\n');
         }
 
-        await supabase.from('bookings').update(updateData).eq('id', booking.id);
+        const { error: updateError } = await supabase.from('bookings').update(updateData).eq('id', booking.id);
+        if (updateError) {
+          console.error('판정 저장 오류:', updateError);
+          throw updateError;
+        }
+
+        // workingBookings 갱신
+        const workingIdx = workingBookings.findIndex((b: any) => b.id === booking.id);
+        if (workingIdx >= 0) {
+          workingBookings[workingIdx] = {
+            ...workingBookings[workingIdx],
+            decision: result.decision,
+            slot_assigned: updateData.slot_assigned || null,
+            status: updateData.status || workingBookings[workingIdx].status,
+          };
+        }
 
         const log: DecisionLog = {
           time: new Date().toLocaleTimeString('ko-KR'),
@@ -193,19 +284,28 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
 
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
         <h3 className="text-sm font-bold text-gray-800 mb-2">판정 로그 (최근 12건)</h3>
-        <div className="space-y-1 max-h-32 overflow-y-auto">
+        <div className="space-y-2 max-h-80 overflow-y-auto">
           {decisionLogs.length === 0 ? (
             <p className="text-sm text-gray-500">판정 이력이 없습니다</p>
           ) : (
             decisionLogs.map((log, idx) => (
-              <div key={idx} className="text-xs p-1 bg-gray-50 rounded border border-gray-200">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-gray-700 flex-shrink-0">{log.time}</span>
-                  <span className="text-gray-600 truncate flex-shrink-0">{log.customer}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${DECISION_COLORS[log.decision]}`}>
+              <div key={idx} className="text-xs p-2 bg-gray-50 rounded border border-gray-200">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="font-medium text-gray-700">{log.time}</span>
+                  <span className="text-gray-600">{log.customer}</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${DECISION_COLORS[log.decision]}`}>
                     {DECISION_LABELS[log.decision]}
                   </span>
                 </div>
+                {log.trace && log.trace.length > 0 && (
+                  <div className="text-gray-600 bg-white p-1.5 rounded border border-gray-100 mt-1">
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      {log.trace.map((line, i) => (
+                        <li key={i} className="text-xs">{line}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
               </div>
             ))
           )}

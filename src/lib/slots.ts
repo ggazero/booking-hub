@@ -41,8 +41,11 @@ export function occupied(date: string, bookings: any[]): Set<Slot> {
 
   bookings.forEach((booking) => {
     if (booking.date === date && booking.slot_assigned) {
-      const slots = booking.slot_assigned.split(',').map((s: string) => s.trim() as Slot);
-      slots.forEach((slot: Slot) => result.add(slot));
+      const slotGroups = booking.slot_assigned.split(',').map((s: string) => s.trim());
+      slotGroups.forEach((group: string) => {
+        const individualSlots = group.split('+').map((s: string) => s.trim() as Slot);
+        individualSlots.forEach((slot: Slot) => result.add(slot));
+      });
     }
   });
 
