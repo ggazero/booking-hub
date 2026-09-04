@@ -6,9 +6,11 @@ import 'leaflet/dist/leaflet.css';
 interface MapBooking {
   id: number;
   customer: string;
-  service: string;
+  kind: string;
+  form: string;
+  memo: string;
   date: string;
-  time: string;
+  slots_wanted: string;
   address: string;
   latitude: number;
   longitude: number;
@@ -52,9 +54,10 @@ export function MapPanel({ selectedBooking }: { selectedBooking: MapBooking | nu
               <Popup>
                 <div className="text-sm">
                   <p className="font-bold">{selectedBooking.customer}</p>
-                  <p className="text-gray-600">{selectedBooking.service}</p>
+                  <p className="text-gray-600">{selectedBooking.kind} / {selectedBooking.form}</p>
+                  <p className="text-gray-600">{selectedBooking.memo}</p>
                   <p className="text-gray-600">
-                    {selectedBooking.date} {selectedBooking.time}
+                    {selectedBooking.date} {selectedBooking.slots_wanted}
                   </p>
                   <p className="text-gray-600 mt-2">{selectedBooking.address}</p>
                 </div>

@@ -4,11 +4,15 @@ import { supabase } from '../lib/supabaseClient';
 interface Booking {
   id: number;
   customer: string;
-  service: string;
+  kind: string;
+  form: string;
+  memo: string;
   date: string;
   time: string;
   address: string;
+  slots_wanted: string;
   status: string;
+  decision: string;
   latitude?: number | null;
   longitude?: number | null;
 }
@@ -39,7 +43,7 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId }:
     try {
       const { data, error: fetchError } = await supabase
         .from('bookings')
-        .select('id, customer, service, date, time, address, status, latitude, longitude')
+        .select('id, customer, kind, form, memo, date, time, address, slots_wanted, status, decision, latitude, longitude')
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
@@ -145,9 +149,11 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId }:
           <thead className="bg-gray-100">
             <tr>
               <th className="border border-gray-300 px-4 py-2 text-left">고객사</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">서비스</th>
+              <th className="border border-gray-300 px-4 py-2 text-left">종류</th>
+              <th className="border border-gray-300 px-4 py-2 text-left">형태</th>
+              <th className="border border-gray-300 px-4 py-2 text-left">메모</th>
               <th className="border border-gray-300 px-4 py-2 text-left">날짜</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">시간</th>
+              <th className="border border-gray-300 px-4 py-2 text-left">희망 슬롯</th>
               <th className="border border-gray-300 px-4 py-2 text-left">위치</th>
               <th className="border border-gray-300 px-4 py-2 text-left">상태</th>
             </tr>
@@ -162,9 +168,11 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId }:
                 }`}
               >
                 <td className="border border-gray-300 px-4 py-2">{booking.customer}</td>
-                <td className="border border-gray-300 px-4 py-2">{booking.service}</td>
+                <td className="border border-gray-300 px-4 py-2">{booking.kind}</td>
+                <td className="border border-gray-300 px-4 py-2">{booking.form}</td>
+                <td className="border border-gray-300 px-4 py-2">{booking.memo}</td>
                 <td className="border border-gray-300 px-4 py-2">{booking.date}</td>
-                <td className="border border-gray-300 px-4 py-2">{booking.time}</td>
+                <td className="border border-gray-300 px-4 py-2">{booking.slots_wanted}</td>
                 <td className="border border-gray-300 px-4 py-2" onClick={(e) => e.stopPropagation()}>
                   {booking.address ? (
                     <a
