@@ -32,10 +32,38 @@ interface BookingTableProps {
   onBookingSelect?: (booking: MapBooking | null) => void;
   selectedBookingId?: number | null;
   mode?: 'list' | 'review';
+  showWeather?: boolean;
 }
 
-export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, mode = 'list' }: BookingTableProps) {
+type WeatherByBookingId = Record<number, string>;
+
+const WEATHER_TARGET_DECISIONS = new Set(['confirmed_auto', 'confirmed_human']);
+const WEATHER_FALLBACK_LOCATION: Record<string, string> = {
+  '서울': '서울',
+  '경기': '수원',
+};
+
+function getWeatherLabel(code: number) {
+  if (code === 0) return '맑음';
+  if ([1, 2].includes(code)) return '구름 조금';
+  if (code === 3) return '흐림';
+  if ([45, 48].includes(code)) return '안개';
+  if ([51, 53, 55, 56, 57].includes(code)) return '이슬비';
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return '비';
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return '눈';
+  if ([95, 96, 99].includes(code)) return '뇌우';
+  return '날씨';
+}
+
+export function BookingTable({
+  refreshKey,
+  onBookingSelect,
+  selectedBookingId,
+  mode = 'list',
+  showWeather = false,
+}: BookingTableProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [weatherByBookingId, setWeatherByBookingId] = useState<WeatherByBookingId>({});
   const [loading, setLoading] = useState(true);
   const [geocodingId, setGeocodingId] = useState<number | null>(null);
   const [error, setError] = useState('');
@@ -43,6 +71,44 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
   useEffect(() => {
     fetchBookings();
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (!showWeather) return;
+
+    const targets = bookings.filter(
+      (booking) => booking.form === '외근' && WEATHER_TARGET_DECISIONS.has(booking.decision)
+    );
+
+    setWeatherByBookingId(
+      Object.fromEntries(targets.map((booking) => [booking.id, '확인 중...']))
+    );
+
+    let cancelled = false;
+
+    async function loadWeather() {
+      const entries = await Promise.all(
+        targets.map(async (booking) => {
+          try {
+            const weather = await fetchBookingWeather(booking);
+            return [booking.id, weather] as const;
+          } catch (weatherError) {
+            console.error('날씨 조회 실패:', weatherError);
+            return [booking.id, '날씨 확인 불가'] as const;
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setWeatherByBookingId(Object.fromEntries(entries));
+      }
+    }
+
+    loadWeather();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookings, showWeather]);
 
   async function fetchBookings() {
     setLoading(true);
@@ -80,6 +146,52 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
       console.error('지오코딩 실패:', err);
       return null;
     }
+  }
+
+  async function fetchBookingWeather(booking: Booking): Promise<string> {
+    let latitude = booking.latitude;
+    let longitude = booking.longitude;
+
+    if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
+      const location = booking.address || WEATHER_FALLBACK_LOCATION[booking.kind];
+      if (!location) throw new Error('주소 및 대체 지역 정보 없음');
+      const coords = await geocodeAddress(location);
+      if (!coords) throw new Error('좌표 확인 불가');
+      latitude = coords.lat;
+      longitude = coords.lon;
+    }
+
+    const params = new URLSearchParams({
+      latitude: String(latitude),
+      longitude: String(longitude),
+      daily: 'weather_code,temperature_2m_max,temperature_2m_min',
+      timezone: 'Asia/Seoul',
+      start_date: booking.date,
+      end_date: booking.date,
+    });
+
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+    if (!response.ok) throw new Error(`Open-Meteo ${response.status}`);
+
+    const data = (await response.json()) as {
+      daily?: {
+        time?: string[];
+        weather_code?: number[];
+        temperature_2m_max?: number[];
+        temperature_2m_min?: number[];
+      };
+    };
+
+    const index = data.daily?.time?.indexOf(booking.date) ?? -1;
+    const code = data.daily?.weather_code?.[index];
+    const maximum = data.daily?.temperature_2m_max?.[index];
+    const minimum = data.daily?.temperature_2m_min?.[index];
+
+    if (index < 0 || !Number.isFinite(code) || !Number.isFinite(maximum) || !Number.isFinite(minimum)) {
+      throw new Error('예보 데이터 없음');
+    }
+
+    return `${getWeatherLabel(code as number)} ${Math.round(minimum as number)}~${Math.round(maximum as number)}℃`;
   }
 
   async function handleRowClick(booking: Booking) {
@@ -335,6 +447,7 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
               <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">형태</th>
               <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">메모</th>
               <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">날짜</th>
+              {showWeather && <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">날씨</th>}
               <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">희망 슬롯</th>
               <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">위치</th>
               <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">상태</th>
@@ -354,6 +467,13 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
                 <td className="px-3 py-2 text-sm text-gray-900">{booking.form}</td>
                 <td className="px-3 py-2 text-sm text-gray-600">{booking.memo}</td>
                 <td className="px-3 py-2 text-sm text-gray-900">{booking.date}</td>
+                {showWeather && (
+                  <td className="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">
+                    {booking.form === '외근' && WEATHER_TARGET_DECISIONS.has(booking.decision)
+                      ? weatherByBookingId[booking.id] || '확인 중...'
+                      : '-'}
+                  </td>
+                )}
                 <td className="px-3 py-2 text-sm text-gray-900">{booking.slots_wanted}</td>
                 <td className="px-3 py-2 text-sm" onClick={(e) => e.stopPropagation()}>
                   {booking.address ? (

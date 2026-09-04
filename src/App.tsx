@@ -132,7 +132,7 @@ export default function App() {
 
           {activeTab === '대시보드' && <StatCards refreshKey={refreshKey} />}
 
-          {activeTab === '예약목록' && <BookingTable refreshKey={refreshKey} />}
+          {activeTab === '예약목록' && <BookingTable refreshKey={refreshKey} showWeather />}
 
           {activeTab === '예약추가' && (
             <BookingForm
