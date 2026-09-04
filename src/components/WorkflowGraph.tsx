@@ -60,9 +60,9 @@ export function WorkflowGraph({ stateCounts, lastDecisionPath, animatingPath }: 
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-      <h2 className="text-lg font-bold text-gray-800 mb-3">예약 워크플로</h2>
-      <svg viewBox="0 0 500 340" style={{ minHeight: '320px' }} className="w-full border border-gray-200 rounded bg-gray-50">
+    <div className="bg-white p-4 rounded border border-gray-200 mb-4 shadow-sm" style={{ boxShadow: '0 2px 8px rgba(0, 11, 80, 0.08)' }}>
+      <h2 className="text-xs font-bold text-gray-600 mb-2">워크플로우</h2>
+      <svg viewBox="0 0 500 300" style={{ minHeight: '280px' }} className="w-full bg-white">
         <defs>
           <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
             <polygon points="0 0, 10 3, 0 6" fill="#999" />

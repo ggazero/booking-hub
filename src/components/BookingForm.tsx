@@ -132,12 +132,12 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">새 예약 추가</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-3">
+    <div className="bg-white p-6 rounded border border-gray-200 mb-4">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">새 예약 추가</h2>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">고객사</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">고객사</label>
             <input
               type="text"
               value={customer}
@@ -145,19 +145,19 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
                 setCustomer(e.target.value);
                 handleFieldChange();
               }}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">종류</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">종류</label>
             <select
               value={kind}
               onChange={(e) => {
                 setKind(e.target.value);
                 handleFieldChange();
               }}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 text-sm"
             >
               <option value="">선택해주세요</option>
               <option value="서울">서울</option>
@@ -168,14 +168,14 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">형태</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">형태</label>
             <select
               value={form}
               onChange={(e) => {
                 setForm(e.target.value);
                 handleFieldChange();
               }}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 text-sm"
             >
               <option value="">선택해주세요</option>
               <option value="외근">외근</option>
@@ -184,19 +184,19 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">메모</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">메모</label>
             <input
               type="text"
               value={memo}
               onChange={(e) => setMemo(e.target.value)}
               placeholder="미팅, 기획 회의 등"
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 text-sm"
             />
           </div>
 
           {form === '외근' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">위치 *</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">위치 *</label>
               <input
                 type="text"
                 value={address}
@@ -204,20 +204,20 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
                   setAddress(e.target.value);
                   handleFieldChange();
                 }}
-                className="w-full border border-gray-300 rounded px-3 py-2"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 text-sm"
               />
             </div>
           )}
 
           {form === '온라인' && address && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">위치</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">위치</label>
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="선택 사항"
-                className="w-full border border-gray-300 rounded px-3 py-2"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 text-sm"
               />
             </div>
           )}
@@ -227,7 +227,7 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
               <button
                 type="button"
                 onClick={() => setAddress('')}
-                className="text-sm text-gray-500"
+                className="text-sm text-gray-600 hover:text-gray-900 transition"
               >
                 위치 추가 (선택)
               </button>
@@ -235,7 +235,7 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">날짜</label>
+            <label className="block text-sm font-medium text-gray-900 mb-1">날짜</label>
             <input
               type="date"
               value={date}
@@ -243,28 +243,28 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
                 setDate(e.target.value);
                 handleFieldChange();
               }}
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-gray-900 text-sm"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">희망 슬롯</label>
-            <div className="space-y-2">
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-900 mb-2">희망 슬롯</label>
+            <div className="flex gap-6">
               {SLOTS.map((slot) => (
-                <label key={slot} className="flex items-center gap-2">
+                <label key={slot} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedSlots.includes(slot)}
                     onChange={() => handleSlotToggle(slot)}
                     className="w-4 h-4"
                   />
-                  <span className="text-sm">
+                  <span className="text-sm text-gray-900">
                     {slot === '오전' && '오전 10-12'}
                     {slot === '오후-1' && '오후-1 13-15'}
                     {slot === '오후-2' && '오후-2 15-17'}
                   </span>
                   {selectedSlots.includes(slot) && (
-                    <span className="text-sm font-bold text-blue-600">
+                    <span className="text-sm font-bold text-[#1d6ae5]">
                       {selectedSlots.indexOf(slot) + 1}
                     </span>
                   )}
@@ -274,17 +274,17 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-gray-200">
+        <div className="mt-4 pt-3 border-t border-gray-200">
           {judgeResult && (
             <div
-              className={`flex items-center gap-2 mb-4 p-3 rounded ${
+              className={`flex items-center gap-2 mb-3 p-2.5 rounded text-sm ${
                 judgeResult.badge === 'blue'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'bg-green-50 text-green-700'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-green-50 text-green-700 border border-green-200'
               }`}
             >
               <span
-                className={`inline-block w-3 h-3 rounded-full ${
+                className={`inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${
                   judgeResult.badge === 'blue' ? 'bg-blue-600' : 'bg-green-600'
                 }`}
               />
@@ -292,12 +292,12 @@ export function BookingForm({ onSuccess }: BookingFormProps) {
             </div>
           )}
 
-          {error && <div className="text-red-600 text-sm mb-4">{error}</div>}
+          {error && <div className="text-red-600 text-sm mb-3">{error}</div>}
 
           <button
             type="submit"
             disabled={loading || judgeResult?.route === 'ask'}
-            className="w-full bg-blue-600 text-white py-2 rounded font-medium hover:bg-blue-700 disabled:bg-gray-400"
+            className="w-full bg-[#1d6ae5] text-white py-2 rounded font-medium hover:bg-[#1560c8] transition disabled:bg-gray-400"
           >
             {loading ? '추가 중...' : '예약하기'}
           </button>

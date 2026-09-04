@@ -90,24 +90,45 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="p-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">예약 관리 허브</h1>
-              <span className="text-xs text-green-600 font-medium">관리자 모드</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-600 text-sm">{session.user?.email}</span>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium"
-              >
-                로그아웃
-              </button>
-            </div>
+    <div className="min-h-screen" style={{ backgroundColor: '#fffbf7' }}>
+      <div className="bg-[#000b50] text-white py-5 px-6 shadow-sm">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">예약 관리 허브</h1>
+            <span className="text-xs text-[#5790eb] font-medium">관리자 모드</span>
           </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-300">{session.user?.email}</span>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-[#1d6ae5] text-white rounded hover:bg-[#1560c8] text-sm font-medium transition"
+            >
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-5xl mx-auto flex px-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                activeTab === tab
+                  ? 'text-[#1d6ae5] border-[#1d6ae5]'
+                  : 'text-gray-600 border-transparent hover:text-gray-900'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <div className="p-6">
+        <div className="max-w-5xl mx-auto">
 
           {activeTab === '대시보드' && <StatCards refreshKey={refreshKey} />}
 
@@ -136,24 +157,6 @@ export default function App() {
           )}
         </div>
       </div>
-
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-        <div className="max-w-5xl mx-auto flex">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-4 text-center font-medium transition-colors ${
-                activeTab === tab
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </nav>
     </div>
   );
 }

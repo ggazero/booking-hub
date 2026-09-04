@@ -204,7 +204,7 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
     : bookings;
 
   if (loading) {
-    return <div className="text-center py-8">로딩 중...</div>;
+    return <div className="text-center py-8 text-gray-500">로딩 중...</div>;
   }
 
   if (displayBookings.length === 0) {
@@ -243,70 +243,72 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
         {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{error}</div>}
         <div className="space-y-2">
           {displayBookings.map((booking: any) => (
-            <div key={booking.id} className="bg-white border border-gray-300 rounded p-4">
-              <div className="flex items-start justify-between mb-2">
+            <div key={booking.id} className={`border rounded p-3 ${booking.decision === 'review' ? 'bg-[#fffcf9]' : 'bg-white'} border-gray-200 shadow-sm`} style={{ boxShadow: '0 1px 3px rgba(0, 11, 80, 0.05)' }}>
+              <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="font-bold">{booking.customer}</p>
-                  <p className="text-sm text-gray-600">{booking.kind} / {booking.form} ({booking.date})</p>
-                  <p className="text-sm text-gray-600">희망: {booking.slots_wanted}</p>
+                  <p className="font-bold text-gray-900">{booking.customer}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{booking.kind} / {booking.form} ({booking.date})</p>
+                  <p className="text-xs text-gray-600">희망: {booking.slots_wanted}</p>
                 </div>
-                <span className={`px-3 py-1 rounded text-sm font-medium ${getDecisionBadge(booking.decision)}`}>
+                <span className={`px-2 py-1 rounded text-xs font-medium flex-shrink-0 ml-2 ${getDecisionBadge(booking.decision)}`}>
                   {getDecisionLabel(booking.decision)}
                 </span>
               </div>
 
-              {booking.decision === 'pending' && !booking.reason && (
-                <button
-                  onClick={() => executeDecision(booking.id)}
-                  className="mb-3 px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
-                >
-                  판정
-                </button>
-              )}
-
-              {booking.reason && <p className="text-sm mb-3">{booking.reason}</p>}
-
-              {booking.decision === 'pending' && (() => {
-                const result = decide(booking, bookings, false);
-                return result.decision === 'pending' && result.candidate ? (
+              <div className="mt-2 pt-2 border-t border-gray-200 space-y-2">
+                {booking.decision === 'pending' && !booking.reason && (
                   <button
-                    onClick={() => updateDecision(booking.id, 'confirmed_human', result.candidate)}
-                    className="px-3 py-1 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700"
+                    onClick={() => executeDecision(booking.id)}
+                    className="w-full px-3 py-1.5 bg-[#1d6ae5] text-white rounded text-xs font-medium hover:bg-[#1560c8] transition"
                   >
-                    후보 {result.candidate} 확정
+                    판정
                   </button>
-                ) : null;
-              })()}
+                )}
 
-              {booking.decision === 'review' && booking.options && (
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500 mb-2">동점 상황 - 한 쪽을 선택해주세요</p>
-                  {booking.options.split(',').map((customer: string, idx: number) => (
+                {booking.reason && <p className="text-xs text-gray-900">{booking.reason}</p>}
+
+                {booking.decision === 'pending' && (() => {
+                  const result = decide(booking, bookings, false);
+                  return result.decision === 'pending' && result.candidate ? (
                     <button
-                      key={idx}
-                      onClick={() => {
-                        updateDecision(booking.id, 'confirmed_human');
-                        const otherCustomer = booking.options.split(',').find((_c: string, i: number) => i !== idx);
-                        if (otherCustomer) {
-                          const otherBooking = bookings.find((b: any) => b.customer === otherCustomer.trim() && b.date === booking.date && b.decision === 'pending');
-                          if (otherBooking) {
-                            updateDecision(otherBooking.id, 'pending');
-                          }
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-yellow-600 text-white rounded text-sm font-medium hover:bg-yellow-700 text-left"
+                      onClick={() => updateDecision(booking.id, 'confirmed_human', result.candidate)}
+                      className="w-full px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700"
                     >
-                      {customer.trim()} 이 쪽으로 확정
+                      후보 {result.candidate} 확정
                     </button>
-                  ))}
-                </div>
-              )}
+                  ) : null;
+                })()}
+
+                {booking.decision === 'review' && booking.options && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-gray-600 font-medium">동점 상황</p>
+                    {booking.options.split(',').map((customer: string, idx: number) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          updateDecision(booking.id, 'confirmed_human');
+                          const otherCustomer = booking.options.split(',').find((_c: string, i: number) => i !== idx);
+                          if (otherCustomer) {
+                            const otherBooking = bookings.find((b: any) => b.customer === otherCustomer.trim() && b.date === booking.date && b.decision === 'pending');
+                            if (otherBooking) {
+                              updateDecision(otherBooking.id, 'pending');
+                            }
+                          }
+                        }}
+                        className="w-full px-3 py-1.5 bg-[#ffc729] text-gray-900 rounded text-xs font-medium hover:bg-[#ffc100] transition"
+                      >
+                        {customer.trim()} 선택
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {booking.trace && (
-                <details className="mt-3 text-xs">
-                  <summary className="cursor-pointer text-blue-600 hover:underline">과정 보기</summary>
-                  <div className="mt-2 p-2 bg-gray-50 rounded">
-                    <ol className="list-decimal list-inside space-y-1 text-gray-700">
+                <details className="text-xs mt-1.5">
+                  <summary className="cursor-pointer text-[#1d6ae5] hover:text-[#1560c8] font-medium text-xs">과정 보기</summary>
+                  <div className="mt-1.5 p-2 bg-white rounded border border-gray-200">
+                    <ol className="list-decimal list-inside space-y-0.5 text-gray-600 text-xs">
                       {booking.trace.split('\n').map((line: string, idx: number) => (
                         line.trim() && <li key={idx}>{line.trim()}</li>
                       ))}
@@ -324,58 +326,58 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
   return (
     <div>
       {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">{error}</div>}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-gray-300">
-          <thead className="bg-gray-100">
+      <div className="overflow-x-auto bg-white rounded border border-gray-200">
+        <table className="w-full border-collapse text-sm">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="border border-gray-300 px-4 py-2 text-left">고객사</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">종류</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">형태</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">메모</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">날짜</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">희망 슬롯</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">위치</th>
-              <th className="border border-gray-300 px-4 py-2 text-left">상태</th>
+              <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">고객사</th>
+              <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">종류</th>
+              <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">형태</th>
+              <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">메모</th>
+              <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">날짜</th>
+              <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">희망 슬롯</th>
+              <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">위치</th>
+              <th className="px-3 py-2 text-left text-xs font-bold text-gray-900">상태</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200">
             {displayBookings.map((booking: any) => (
               <tr
                 key={booking.id}
                 onClick={() => handleRowClick(booking)}
                 className={`cursor-pointer transition-colors ${
-                  selectedBookingId === booking.id ? 'bg-blue-100' : 'hover:bg-gray-50'
+                  selectedBookingId === booking.id ? 'bg-blue-50' : 'hover:bg-gray-50'
                 }`}
               >
-                <td className="border border-gray-300 px-4 py-2">{booking.customer}</td>
-                <td className="border border-gray-300 px-4 py-2">{booking.kind}</td>
-                <td className="border border-gray-300 px-4 py-2">{booking.form}</td>
-                <td className="border border-gray-300 px-4 py-2">{booking.memo}</td>
-                <td className="border border-gray-300 px-4 py-2">{booking.date}</td>
-                <td className="border border-gray-300 px-4 py-2">{booking.slots_wanted}</td>
-                <td className="border border-gray-300 px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                <td className="px-3 py-2 text-sm text-gray-900">{booking.customer}</td>
+                <td className="px-3 py-2 text-sm text-gray-900">{booking.kind}</td>
+                <td className="px-3 py-2 text-sm text-gray-900">{booking.form}</td>
+                <td className="px-3 py-2 text-sm text-gray-600">{booking.memo}</td>
+                <td className="px-3 py-2 text-sm text-gray-900">{booking.date}</td>
+                <td className="px-3 py-2 text-sm text-gray-900">{booking.slots_wanted}</td>
+                <td className="px-3 py-2 text-sm" onClick={(e) => e.stopPropagation()}>
                   {booking.address ? (
                     <a
                       href={`https://maps.google.com/?q=${encodeURIComponent(booking.address)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 underline"
+                      className="text-[#1d6ae5] underline hover:text-[#1560c8]"
                     >
                       {booking.address}
                     </a>
                   ) : (
-                    '-'
+                    <span className="text-gray-500">-</span>
                   )}
                 </td>
-                <td className="border border-gray-300 px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                <td className="px-3 py-2 text-sm" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => toggleStatus(booking.id, booking.status)}
                     disabled={geocodingId === booking.id}
-                    className={`px-3 py-1 rounded font-medium cursor-pointer ${
+                    className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition ${
                       booking.status === 'pending'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-green-100 text-green-800'
-                    } ${geocodingId === booking.id ? 'opacity-50' : ''}`}
+                        ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                        : 'bg-green-100 text-green-800 hover:bg-green-200'
+                    } ${geocodingId === booking.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {booking.status === 'pending' ? '대기' : '확정'}
                   </button>

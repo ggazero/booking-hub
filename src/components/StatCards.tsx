@@ -18,13 +18,6 @@ interface Booking {
   trace?: string | null;
 }
 
-interface DecisionLog {
-  time: string;
-  customer: string;
-  decision: string;
-  trace: string[];
-}
-
 const DECISION_COLORS: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-800',
   confirmed_auto: 'bg-green-100 text-green-800',
@@ -59,7 +52,6 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
     const saved = localStorage.getItem('auto-judge');
     return saved ? JSON.parse(saved) : true;
   });
-  const [decisionLogs, setDecisionLogs] = useState<DecisionLog[]>([]);
   const [lastDecisionPath, setLastDecisionPath] = useState<string>();
   const [animatingPath, setAnimatingPath] = useState(false);
 
@@ -217,14 +209,6 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
           };
         }
 
-        const log: DecisionLog = {
-          time: new Date().toLocaleTimeString('ko-KR'),
-          customer: booking.customer,
-          decision: result.decision,
-          trace: result.trace,
-        };
-        setDecisionLogs((prev) => [log, ...prev.slice(0, 11)]);
-
         setLastDecisionPath(`pending-${result.decision}`);
         setAnimatingPath(true);
       }
@@ -236,94 +220,58 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
   }
 
   const getDecisionCard = (booking: Booking) => {
-    const bgColor = DECISION_COLORS[booking.decision] || 'bg-gray-100 text-gray-800';
+    const bgColor = DECISION_COLORS[booking.decision] || 'bg-gray-50';
 
     return (
       <div key={booking.id} className={`${bgColor} p-2 rounded border text-xs`}>
-        <p className="font-bold">{booking.customer}</p>
-        <p className="text-gray-600">{booking.date}</p>
-        <p className="text-gray-600">{booking.kind} / {booking.form}</p>
-        <p className="text-gray-600 truncate">{booking.memo}</p>
-        {booking.slot_assigned && <p className="font-medium mt-0.5">{booking.slot_assigned}</p>}
+        <p className="font-semibold text-gray-900 truncate">{booking.customer}</p>
+        <p className="text-gray-600 text-xs mt-0.5">{booking.date}</p>
+        <p className="text-gray-600 text-xs">{booking.kind} / {booking.form}</p>
+        <p className="text-gray-600 text-xs truncate">{booking.memo}</p>
+        {booking.slot_assigned && <p className="font-semibold mt-0.5 text-gray-900 text-xs">{booking.slot_assigned}</p>}
         {booking.decision === 'review' && booking.reason && (
-          <p className="text-gray-500 mt-0.5 line-clamp-2">{booking.reason}</p>
+          <p className="text-gray-600 mt-0.5 line-clamp-1 text-xs">{booking.reason}</p>
         )}
       </div>
     );
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="space-y-4">
+      <div className="bg-white p-4 rounded border border-gray-200 shadow-sm" style={{ boxShadow: '0 2px 8px rgba(0, 11, 80, 0.08)' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={autoJudge}
                 onChange={(e) => setAutoJudge(e.target.checked)}
                 className="w-4 h-4"
               />
-              <span className="text-sm font-medium text-gray-700">자동 판정</span>
+              <span className="text-sm font-medium text-gray-900">자동 판정</span>
             </label>
           </div>
           <button
             onClick={handleJudgeAll}
-            className="px-4 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700"
+            className="px-4 py-2 bg-[#1d6ae5] text-white rounded font-medium hover:bg-[#1560c8] transition"
           >
             전부 판정
           </button>
         </div>
       </div>
 
-      <WorkflowGraph
-        stateCounts={stateCounts}
-        lastDecisionPath={lastDecisionPath}
-        animatingPath={animatingPath}
-      />
-
-      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-        <h3 className="text-sm font-bold text-gray-800 mb-2">판정 로그 (최근 12건)</h3>
-        <div className="space-y-2 max-h-80 overflow-y-auto">
-          {decisionLogs.length === 0 ? (
-            <p className="text-sm text-gray-500">판정 이력이 없습니다</p>
-          ) : (
-            decisionLogs.map((log, idx) => (
-              <div key={idx} className="text-xs p-2 bg-gray-50 rounded border border-gray-200">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="font-medium text-gray-700">{log.time}</span>
-                  <span className="text-gray-600">{log.customer}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${DECISION_COLORS[log.decision]}`}>
-                    {DECISION_LABELS[log.decision]}
-                  </span>
-                </div>
-                {log.trace && log.trace.length > 0 && (
-                  <div className="text-gray-600 bg-white p-1.5 rounded border border-gray-100 mt-1">
-                    <ol className="list-decimal list-inside space-y-0.5">
-                      {log.trace.map((line, i) => (
-                        <li key={i} className="text-xs">{line}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="bg-white p-4 rounded-lg shadow-md">
+      <div className="bg-white p-4 rounded border border-gray-200 shadow-sm" style={{ boxShadow: '0 2px 8px rgba(0, 11, 80, 0.08)' }}>
+        <h3 className="text-sm font-bold text-gray-900 mb-3">상태</h3>
         <div className="grid grid-cols-6 gap-3">
           {(['pending', 'confirmed_auto', 'confirmed_human', 'review', 'rejected', 'asking'] as const).map((state) => {
             const stateBookings = bookings.filter((b) => b.decision === state);
             return (
-              <div key={state} className="flex flex-col">
-                <h3 className="text-xs font-bold text-gray-800 mb-2">
-                  {DECISION_LABELS[state]} ({stateBookings.length})
-                </h3>
-                <div className="space-y-1 overflow-y-auto max-h-56 pr-1 flex-1">
+              <div key={state} className="flex flex-col p-3 bg-white rounded border border-gray-200">
+                <h4 className="text-xs font-bold text-gray-900 mb-2">{DECISION_LABELS[state]}</h4>
+                <p className="text-2xl font-bold text-[#1d6ae5] mb-2">{stateBookings.length}</p>
+                <div className="space-y-1 overflow-y-auto max-h-40 flex-1">
                   {stateBookings.length === 0 ? (
-                    <p className="text-xs text-gray-400">없음</p>
+                    <p className="text-xs text-gray-400">-</p>
                   ) : (
                     stateBookings.map((booking) => getDecisionCard(booking))
                   )}
@@ -333,6 +281,12 @@ export function StatCards({ refreshKey }: { refreshKey: number }) {
           })}
         </div>
       </div>
+
+      <WorkflowGraph
+        stateCounts={stateCounts}
+        lastDecisionPath={lastDecisionPath}
+        animatingPath={animatingPath}
+      />
     </div>
   );
 }
