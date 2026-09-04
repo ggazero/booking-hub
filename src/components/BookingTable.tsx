@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { decide } from '../lib/decide';
 
 interface Booking {
   id: number;
@@ -13,6 +14,10 @@ interface Booking {
   slots_wanted: string;
   status: string;
   decision: string;
+  reason?: string | null;
+  options?: string | null;
+  slot_assigned?: string | null;
+  trace?: string | null;
   latitude?: number | null;
   longitude?: number | null;
 }
@@ -44,7 +49,7 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
     try {
       const { data, error: fetchError } = await supabase
         .from('bookings')
-        .select('id, customer, kind, form, memo, date, time, address, slots_wanted, status, decision, latitude, longitude')
+        .select('id, customer, kind, form, memo, date, time, address, slots_wanted, status, decision, reason, options, slot_assigned, trace, latitude, longitude')
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
@@ -134,6 +139,35 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
     }
   }
 
+  async function executeDecision(bookingId: number) {
+    try {
+      const booking = bookings.find((b) => b.id === bookingId);
+      if (!booking) return;
+
+      const result = decide(booking, bookings, false);
+
+      const updateData: any = {
+        decision: result.decision,
+        reason: result.reason,
+      };
+      if (result.options) updateData.options = result.options;
+      if (result.slotAssigned) updateData.slot_assigned = result.slotAssigned;
+      if (result.trace && result.trace.length > 0) {
+        updateData.trace = result.trace.join('\n');
+      }
+
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update(updateData)
+        .eq('id', bookingId);
+
+      if (updateError) throw updateError;
+      fetchBookings();
+    } catch (error) {
+      console.error('판정 실패:', error);
+    }
+  }
+
   async function updateDecision(id: number, newDecision: string, slotAssigned?: string) {
     try {
       const updateData: any = { decision: newDecision };
@@ -208,24 +242,46 @@ export function BookingTable({ refreshKey, onBookingSelect, selectedBookingId, m
                 </span>
               </div>
 
-              <p className="text-sm mb-3">{booking.reason}</p>
-
-              {booking.decision === 'pending' && booking.candidate && (
+              {booking.decision === 'pending' && !booking.reason && (
                 <button
-                  onClick={() => updateDecision(booking.id, 'confirmed_human', booking.candidate)}
-                  className="px-3 py-1 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700"
+                  onClick={() => executeDecision(booking.id)}
+                  className="mb-3 px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
                 >
-                  후보 {booking.candidate} 확정
+                  판정
                 </button>
               )}
 
+              {booking.reason && <p className="text-sm mb-3">{booking.reason}</p>}
+
+              {booking.decision === 'pending' && (() => {
+                const result = decide(booking, bookings, false);
+                return result.decision === 'pending' && result.candidate ? (
+                  <button
+                    onClick={() => updateDecision(booking.id, 'confirmed_human', result.candidate)}
+                    className="px-3 py-1 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700"
+                  >
+                    후보 {result.candidate} 확정
+                  </button>
+                ) : null;
+              })()}
+
               {booking.decision === 'review' && booking.options && (
                 <div className="space-y-2">
-                  {booking.options.split(',').map((customer: string) => (
+                  <p className="text-xs text-gray-500 mb-2">동점 상황 - 한 쪽을 선택해주세요</p>
+                  {booking.options.split(',').map((customer: string, idx: number) => (
                     <button
-                      key={customer}
-                      onClick={() => updateDecision(booking.id, 'confirmed_human')}
-                      className="w-full px-3 py-1 bg-yellow-600 text-white rounded text-sm font-medium hover:bg-yellow-700 text-left"
+                      key={idx}
+                      onClick={() => {
+                        updateDecision(booking.id, 'confirmed_human');
+                        const otherCustomer = booking.options.split(',').find((_c: string, i: number) => i !== idx);
+                        if (otherCustomer) {
+                          const otherBooking = bookings.find((b: any) => b.customer === otherCustomer.trim() && b.date === booking.date && b.decision === 'pending');
+                          if (otherBooking) {
+                            updateDecision(otherBooking.id, 'pending');
+                          }
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-yellow-600 text-white rounded text-sm font-medium hover:bg-yellow-700 text-left"
                     >
                       {customer.trim()} 이 쪽으로 확정
                     </button>
